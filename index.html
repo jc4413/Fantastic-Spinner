@@ -1,235 +1,251 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Elite Rigged Spinner</title>
-    <style>
-        :root { --primary: #8b5cf6; --bg: #0f172a; --panel: #1e293b; --text: #ffffff; }
-        body.night { --bg: #0f172a; --panel: #1e293b; --text: #ffffff; }
-        body.day { --bg: #f1f5f9; --panel: #ffffff; --text: #1e293b; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>Multi-Rig Pro Spinner</title>
+    <style>
+        :root { --primary: #8b5cf6; --bg: #0f172a; --panel: #1e293b; --text: #ffffff; }
+        body.night { --bg: #0f172a; --panel: #1e293b; --text: #ffffff; }
+        body.day { --bg: #f1f5f9; --panel: #ffffff; --text: #1e293b; }
 
-        body { 
-            font-family: 'Segoe UI', sans-serif; 
-            background: var(--bg); color: var(--text); 
-            display: flex; flex-direction: column; align-items: center; 
-            margin: 0; padding: 0; min-height: 100vh; transition: background 0.4s;
-            overflow-x: hidden;
-        }
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            background: var(--bg); color: var(--text); 
+            display: flex; flex-direction: column; align-items: center; 
+            margin: 0; padding: 0; min-height: 100vh; transition: background 0.4s;
+            overflow-x: hidden;
+        }
 
-        #ui-wrapper { 
-            display: flex; flex-direction: column; align-items: center; 
-            width: 100%; max-width: 450px; padding: 20px; box-sizing: border-box; 
-        }
+        #ui-wrapper { 
+            display: flex; flex-direction: column; align-items: center; 
+            width: 100%; max-width: 450px; padding: 20px; box-sizing: border-box; 
+        }
 
-        #wheel-container { 
-            position: relative; width: 320px; height: 320px; 
-            margin: 20px 0; display: flex; align-items: center; justify-content: center; 
-        }
+        #wheel-container { 
+            position: relative; width: 320px; height: 320px; 
+            margin: 20px 0; display: flex; align-items: center; justify-content: center; 
+        }
 
-        canvas#wheel { 
-            width: 100%; height: 100%; border-radius: 50%; 
-            border: 8px solid #334155; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.4); 
-            transition: transform 5s cubic-bezier(0.15, 0, 0.15, 1); 
-            z-index: 1; 
-        }
+        canvas#wheel { 
+            width: 100%; height: 100%; border-radius: 50%; 
+            border: 8px solid #334155; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4); 
+            transition: transform 5s cubic-bezier(0.15, 0, 0.15, 1); 
+            z-index: 1; 
+        }
 
-        #pointer { 
-            position: absolute; top: -15px; left: 50%; transform: translateX(-50%); 
-            width: 0; height: 0; border-left: 20px solid transparent; border-right: 20px solid transparent; 
-            border-top: 35px solid #ff4757; z-index: 10; 
-        }
+        #pointer { 
+            position: absolute; top: -15px; left: 50%; transform: translateX(-50%); 
+            width: 0; height: 0; border-left: 20px solid transparent; border-right: 20px solid transparent; 
+            border-top: 35px solid #ff4757; z-index: 10; 
+        }
 
-        #center-hub { 
-            position: absolute; width: 70px; height: 70px; background: white; 
-            border-radius: 50%; border: 4px solid #334155; cursor: pointer; 
-            z-index: 20; display: flex; align-items: center; justify-content: center; 
-            color: #333; font-weight: 900; font-size: 14px; user-select: none;
-        }
+        #center-hub { 
+            position: absolute; width: 70px; height: 70px; background: white; 
+            border-radius: 50%; border: 4px solid #334155; cursor: pointer; 
+            z-index: 20; display: flex; align-items: center; justify-content: center; 
+            color: #333; font-weight: 900; font-size: 14px; user-select: none;
+        }
 
-        .input-area { width: 100%; margin-top: 10px; }
-        
-        textarea { 
-            width: 100%; height: 100px; padding: 12px; border-radius: 12px; 
-            border: 1px solid rgba(128, 128, 128, 0.3); 
-            background: var(--panel); color: var(--text); font-size: 16px; 
-            box-sizing: border-box; resize: none; 
-        }
+        .input-area { width: 100%; margin-top: 10px; }
+        textarea { 
+            width: 100%; height: 100px; padding: 12px; border-radius: 12px; 
+            border: 1px solid rgba(128, 128, 128, 0.3); 
+            background: var(--panel); color: var(--text); font-size: 16px; 
+            box-sizing: border-box; resize: none; 
+        }
 
-        #spin-btn { 
-            width: 100%; padding: 15px; margin-top: 10px; border-radius: 12px; border: none; 
-            background: var(--primary); color: white; font-weight: bold; font-size: 18px; cursor: pointer; 
-        }
+        #spin-btn { 
+            width: 100%; padding: 15px; margin-top: 10px; border-radius: 12px; border: none; 
+            background: var(--primary); color: white; font-weight: bold; font-size: 18px; cursor: pointer; 
+        }
 
-        #cd-panel { 
-            display: none; position: fixed; top: 20%; left: 50%; transform: translateX(-50%);
-            background: var(--panel); padding: 25px; border-radius: 20px; 
-            border: 3px solid var(--primary); z-index: 100; width: 85%; max-width: 350px; 
-        }
-        #cd-panel input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #444; background: #000; color: #fff; box-sizing: border-box; }
+        #cd-panel { 
+            display: none; position: fixed; top: 20%; left: 50%; transform: translateX(-50%);
+            background: var(--panel); padding: 25px; border-radius: 20px; 
+            border: 3px solid var(--primary); z-index: 100; width: 85%; max-width: 350px; 
+        }
+        #cd-panel input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #444; background: #000; color: #fff; box-sizing: border-box; }
 
-        #win-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; align-items: center; justify-content: center; }
-        .win-card { background: white; color: #1e293b; padding: 40px; border-radius: 20px; text-align: center; max-width: 80%; }
-        
-        #confetti-canvas { 
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
-            pointer-events: none; z-index: 201; 
-        }
-    </style>
+        #win-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; align-items: center; justify-content: center; }
+        .win-card { background: white; color: #1e293b; padding: 40px; border-radius: 20px; text-align: center; max-width: 80%; }
+        
+        #confetti-canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 201; }
+    </style>
 </head>
 <body class="night">
 
 <canvas id="confetti-canvas"></canvas>
 
 <div id="ui-wrapper">
-    <div id="wheel-container">
-        <div id="pointer"></div>
-        <div id="center-hub" onclick="handleCenterTap()">SPIN</div>
-        <canvas id="wheel" width="600" height="600"></canvas>
-    </div>
+    <div id="wheel-container">
+        <div id="pointer"></div>
+        <div id="center-hub" onclick="handleCenterTap()">SPIN</div>
+        <canvas id="wheel" width="600" height="600"></canvas>
+    </div>
 
-    <div class="input-area">
-        <textarea id="namesList" oninput="drawWheel()">John&#10;Sarah&#10;Mike&#10;Emma&#10;Alex</textarea>
-        <button id="spin-btn" onclick="spin()">SPIN THE WHEEL</button>
-    </div>
+    <div class="input-area">
+        <textarea id="namesList" oninput="drawWheel()">John&#10;Sarah&#10;Mike&#10;Emma&#10;Alex</textarea>
+        <button id="spin-btn" onclick="spin()">SPIN THE WHEEL</button>
+    </div>
 </div>
 
 <div id="cd-panel">
-    <h3>Override Console</h3>
-    <input type="text" id="rigCmd" placeholder="/Name_100% or /clr_" autofocus>
-    <button onclick="applyAndClose()" style="width:100%; background: var(--primary); color:white; border:none; padding:10px; border-radius:8px;">Save Changes</button>
+    <h3 style="margin:0">Override Console</h3>
+    <p style="font-size:10px; opacity:0.6">Example: /John_25 /Sarah_25 /Mike_50</p>
+    <input type="text" id="rigCmd" placeholder="Enter commands..." autofocus>
+    <button onclick="applyAndClose()" style="width:100%; background: var(--primary); color:white; border:none; padding:10px; border-radius:8px;">Apply Rig</button>
 </div>
 
 <div id="win-overlay" onclick="closeWinner()">
-    <div class="win-card">
-        <h1 id="winner-name" style="font-size: 48px; margin: 0; transition: color 0.3s;">---</h1>
-        <p style="margin-top: 15px; font-weight: bold; color: #64748b; letter-spacing: 1px;">HAS WON!</p>
-    </div>
+    <div class="win-card">
+        <h1 id="winner-name" style="font-size: 48px; margin: 0;">---</h1>
+        <p id="winner-msg" style="margin-top: 15px; font-weight: bold; color: #64748b;">HAS WON!</p>
+    </div>
 </div>
 
 <script>
-    const canvas = document.getElementById('wheel');
-    const ctx = canvas.getContext('2d');
-    const namesArea = document.getElementById('namesList');
-    const rigInput = document.getElementById('rigCmd');
-    const confCanvas = document.getElementById('confetti-canvas');
-    const confCtx = confCanvas.getContext('2d');
-    
-    let segments = [];
-    let isSpinning = false;
-    let tapCount = 0;
-    let tapTimer;
-    let currentDeg = 0;
-    let activeCommand = ""; 
-    let confettiParticles = [];
-    const colors = ["#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#3b82f6", "#ef4444", "#fb923c", "#2dd4bf"];
+    const canvas = document.getElementById('wheel');
+    const ctx = canvas.getContext('2d');
+    const namesArea = document.getElementById('namesList');
+    const rigInput = document.getElementById('rigCmd');
+    const confCanvas = document.getElementById('confetti-canvas');
+    const confCtx = confCanvas.getContext('2d');
+    
+    let segments = [];
+    let isSpinning = false;
+    let tapCount = 0;
+    let tapTimer;
+    let currentDeg = 0;
+    let activeCommand = ""; 
+    let confettiParticles = [];
+    const colors = ["#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#3b82f6", "#ef4444", "#fb923c", "#2dd4bf"];
 
-    function drawWheel() {
-        const names = namesArea.value.split('\n').filter(t => t.trim() !== "");
-        segments = names.map((n, i) => ({ name: n.trim(), color: colors[i % colors.length] }));
-        const arc = (Math.PI * 2) / segments.length;
-        ctx.clearRect(0, 0, 600, 600);
-        segments.forEach((s, i) => {
-            const angle = i * arc;
-            ctx.beginPath(); ctx.fillStyle = s.color; ctx.moveTo(300, 300);
-            ctx.arc(300, 300, 290, angle, angle + arc); ctx.lineTo(300, 300); ctx.fill();
-            ctx.save(); ctx.translate(300, 300); ctx.rotate(angle + arc / 2);
-            ctx.textAlign = "right"; ctx.fillStyle = "white"; ctx.font = "bold 24px sans-serif";
-            ctx.fillText(s.name, 270, 10); ctx.restore();
-        });
-    }
+    function drawWheel() {
+        const names = namesArea.value.split('\n').filter(t => t.trim() !== "");
+        segments = names.map((n, i) => ({ name: n.trim(), color: colors[i % colors.length] }));
+        const arc = (Math.PI * 2) / segments.length;
+        ctx.clearRect(0, 0, 600, 600);
+        segments.forEach((s, i) => {
+            const angle = i * arc;
+            ctx.beginPath(); ctx.fillStyle = s.color; ctx.moveTo(300, 300);
+            ctx.arc(300, 300, 290, angle, angle + arc); ctx.lineTo(300, 300); ctx.fill();
+            ctx.save(); ctx.translate(300, 300); ctx.rotate(angle + arc / 2);
+            ctx.textAlign = "right"; ctx.fillStyle = "white"; ctx.font = "bold 24px sans-serif";
+            ctx.fillText(s.name, 270, 10); ctx.restore();
+        });
+    }
 
-    function spin() {
-        if (isSpinning || segments.length === 0) return;
-        isSpinning = true;
-        let winIndex = -1;
-        let isAlmost = false;
+    function spin() {
+        if (isSpinning || segments.length === 0) return;
+        isSpinning = true;
+        let winIndex = -1;
+        let isAlmost = false;
 
-        const cmd = activeCommand.toLowerCase();
-        if (cmd.startsWith('/alm')) {
-            const target = cmd.replace('/alm', '').trim();
-            const idx = segments.findIndex(s => s.name.toLowerCase() === target);
-            if (idx !== -1) { isAlmost = true; winIndex = (idx + 1) % segments.length; }
-        } else if (cmd.startsWith('/') && cmd.includes('_')) {
-            const parts = cmd.substring(1).split('_');
-            const target = parts[0].trim();
-            const chance = parseInt(parts[1]);
-            if (Math.random() * 100 <= chance) winIndex = segments.findIndex(s => s.name.toLowerCase() === target);
-        }
+        const cmd = activeCommand.toLowerCase();
 
-        if (winIndex === -1) winIndex = Math.floor(Math.random() * segments.length);
-        const arcDeg = 360 / segments.length;
-        let landingOffset = isAlmost ? 3 : (arcDeg / 2);
-        const targetPos = (360 - (winIndex * arcDeg)) - landingOffset;
-        currentDeg += 3600 + (targetPos - (currentDeg % 360)) - 90;
-        canvas.style.transform = `rotate(${currentDeg}deg)`;
+        // Check for "Almost" first
+        if (cmd.startsWith('/alm')) {
+            const target = cmd.replace('/alm', '').trim();
+            const idx = segments.findIndex(s => s.name.toLowerCase() === target);
+            if (idx !== -1) { isAlmost = true; winIndex = (idx + 1) % segments.length; }
+        } 
+        // Multi-Rig Logic
+        else if (cmd.includes('_')) {
+            const rigs = cmd.split(' ').filter(c => c.startsWith('/') && c.includes('_'));
+            let totalAssigned = 0;
+            let roll = Math.random() * 100;
+            let cumulative = 0;
 
-        setTimeout(() => {
-            const winner = segments[winIndex];
-            const nameDisplay = document.getElementById('winner-name');
-            nameDisplay.innerText = winner.name;
-            nameDisplay.style.color = winner.color; // Match the wheel color!
-            
-            document.getElementById('win-overlay').style.display = 'flex';
-            startConfetti();
-            isSpinning = false;
-        }, 5100);
-    }
+            for (let r of rigs) {
+                const parts = r.substring(1).split('_');
+                const targetName = parts[0];
+                const weight = parseInt(parts[1]);
+                const idx = segments.findIndex(s => s.name.toLowerCase() === targetName);
+                
+                if (idx !== -1) {
+                    cumulative += weight;
+                    if (roll <= cumulative && winIndex === -1) {
+                        winIndex = idx;
+                    }
+                }
+            }
+        }
 
-    function applyAndClose() {
-        const cmd = rigInput.value.trim();
-        const low = cmd.toLowerCase();
-        if (low === '/clr_') activeCommand = "";
-        else if (low === '/day_') document.body.className = 'day';
-        else if (low === '/night_') document.body.className = 'night';
-        else activeCommand = cmd;
-        rigInput.value = "";
-        document.getElementById('cd-panel').style.display = 'none';
-    }
+        // Random fallback if no rig hit or no rigs active
+        if (winIndex === -1) winIndex = Math.floor(Math.random() * segments.length);
 
-    function startConfetti() {
-        confCanvas.width = window.innerWidth;
-        confCanvas.height = window.innerHeight;
-        for (let i = 0; i < 100; i++) {
-            confettiParticles.push({
-                x: Math.random() * confCanvas.width, y: -20,
-                size: Math.random() * 10 + 5, color: colors[Math.floor(Math.random() * colors.length)],
-                velY: Math.random() * 5 + 3, velX: Math.random() * 4 - 2, rot: Math.random() * 360
-            });
-        }
-        animateConf();
-    }
+        const arcDeg = 360 / segments.length;
+        let landingOffset = isAlmost ? 3 : (arcDeg / 2);
+        const targetPos = (360 - (winIndex * arcDeg)) - landingOffset;
+        currentDeg += 3600 + (targetPos - (currentDeg % 360)) - 90;
+        canvas.style.transform = `rotate(${currentDeg}deg)`;
 
-    function animateConf() {
-        if (!confettiParticles.length) return;
-        confCtx.clearRect(0,0,confCanvas.width, confCanvas.height);
-        confettiParticles.forEach((p, i) => {
-            p.y += p.velY; p.x += p.velX; p.rot += 5;
-            confCtx.save(); confCtx.fillStyle = p.color; confCtx.translate(p.x, p.y);
-            confCtx.rotate(p.rot * Math.PI/180);
-            confCtx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
-            confCtx.restore();
-            if (p.y > confCanvas.height) confettiParticles.splice(i, 1);
-        });
-        requestAnimationFrame(animateConf);
-    }
+        setTimeout(() => {
+            const winner = segments[winIndex];
+            const nameDisplay = document.getElementById('winner-name');
+            nameDisplay.innerText = winner.name;
+            nameDisplay.style.color = winner.color;
+            document.getElementById('win-overlay').style.display = 'flex';
+            startConfetti();
+            isSpinning = false;
+        }, 5100);
+    }
 
-    function closeWinner() {
-        document.getElementById('win-overlay').style.display = 'none';
-        confettiParticles = [];
-        confCtx.clearRect(0,0,confCanvas.width, confCanvas.height);
-    }
+    function applyAndClose() {
+        const cmd = rigInput.value.trim();
+        const low = cmd.toLowerCase();
+        if (low === '/clr_') activeCommand = "";
+        else if (low === '/day_') document.body.className = 'day';
+        else if (low === '/night_') document.body.className = 'night';
+        else activeCommand = cmd;
+        rigInput.value = "";
+        document.getElementById('cd-panel').style.display = 'none';
+    }
 
-    function handleCenterTap() {
-        tapCount++;
-        clearTimeout(tapTimer);
-        tapTimer = setTimeout(() => tapCount = 0, 1000);
-        if (tapCount >= 5) { document.getElementById('cd-panel').style.display = 'block'; tapCount = 0; }
-        else if (!isSpinning) spin();
-    }
+    function startConfetti() {
+        confCanvas.width = window.innerWidth;
+        confCanvas.height = window.innerHeight;
+        for (let i = 0; i < 100; i++) {
+            confettiParticles.push({
+                x: Math.random() * confCanvas.width, y: -20,
+                size: Math.random() * 10 + 5, color: colors[Math.floor(Math.random() * colors.length)],
+                velY: Math.random() * 5 + 3, velX: Math.random() * 4 - 2, rot: Math.random() * 360
+            });
+        }
+        animateConf();
+    }
 
-    drawWheel();
+    function animateConf() {
+        if (!confettiParticles.length) return;
+        confCtx.clearRect(0,0,confCanvas.width, confCanvas.height);
+        confettiParticles.forEach((p, i) => {
+            p.y += p.velY; p.x += p.velX; p.rot += 5;
+            confCtx.save(); confCtx.fillStyle = p.color; confCtx.translate(p.x, p.y);
+            confCtx.rotate(p.rot * Math.PI/180);
+            confCtx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+            confCtx.restore();
+            if (p.y > confCanvas.height) confettiParticles.splice(i, 1);
+        });
+        requestAnimationFrame(animateConf);
+    }
+
+    function closeWinner() {
+        document.getElementById('win-overlay').style.display = 'none';
+        confettiParticles = [];
+        confCtx.clearRect(0,0,confCanvas.width, confCanvas.height);
+    }
+
+    function handleCenterTap() {
+        tapCount++;
+        clearTimeout(tapTimer);
+        tapTimer = setTimeout(() => tapCount = 0, 1000);
+        if (tapCount >= 5) { document.getElementById('cd-panel').style.display = 'block'; tapCount = 0; }
+        else if (!isSpinning) spin();
+    }
+
+    drawWheel();
 </script>
 </body>
 </html>
