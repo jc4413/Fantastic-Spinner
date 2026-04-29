@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Fantastic-Spinner</title>
+    <title>Multi-Rig Pro Spinner - DON Edition</title>
     <style>
         :root { --primary: #8b5cf6; --bg: #0f172a; --panel: #1e293b; --text: #ffffff; }
         body.night { --bg: #0f172a; --panel: #1e293b; --text: #ffffff; }
@@ -71,6 +71,15 @@
         #win-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; align-items: center; justify-content: center; }
         .win-card { background: white; color: #1e293b; padding: 40px; border-radius: 20px; text-align: center; max-width: 80%; }
         
+        #don-btn {
+            margin-top: 20px; padding: 12px 24px; color: white; 
+            border: none; border-radius: 8px; font-weight: 800; cursor: pointer; display: none;
+            opacity: 0.8; /* Makes it slightly dimmer */
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: transform 0.2s, opacity 0.2s, background-color 0.3s;
+        }
+        #don-btn:hover { opacity: 1; transform: scale(1.05); }
+
         #confetti-canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 201; }
     </style>
 </head>
@@ -99,9 +108,10 @@
 </div>
 
 <div id="win-overlay" onclick="closeWinner()">
-    <div class="win-card">
+    <div class="win-card" onclick="event.stopPropagation()">
         <h1 id="winner-name" style="font-size: 48px; margin: 0;">---</h1>
         <p id="winner-msg" style="margin-top: 15px; font-weight: bold; color: #64748b;">HAS WON!</p>
+        <button id="don-btn" onclick="startDoubleOrNothing()">DOUBLE OR NOTHING?</button>
     </div>
 </div>
 
@@ -120,6 +130,9 @@
     let currentDeg = 0;
     let activeCommand = ""; 
     let confettiParticles = [];
+    let originalNames = "";
+    let isDonMode = false;
+
     const colors = ["#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#3b82f6", "#ef4444", "#fb923c", "#2dd4bf"];
 
     function drawWheel() {
@@ -145,13 +158,11 @@
 
         const cmd = activeCommand.toLowerCase();
 
-        // Check for "Almost" first
         if (cmd.startsWith('/alm')) {
             const target = cmd.replace('/alm', '').trim();
             const idx = segments.findIndex(s => s.name.toLowerCase() === target);
             if (idx !== -1) { isAlmost = true; winIndex = (idx + 1) % segments.length; }
         } 
-        // Multi-Rig Logic
         else if (cmd.includes('_')) {
             const rigs = cmd.split(' ').filter(c => c.startsWith('/') && c.includes('_'));
             let totalAssigned = 0;
@@ -166,14 +177,11 @@
                 
                 if (idx !== -1) {
                     cumulative += weight;
-                    if (roll <= cumulative && winIndex === -1) {
-                        winIndex = idx;
-                    }
+                    if (roll <= cumulative && winIndex === -1) { winIndex = idx; }
                 }
             }
         }
 
-        // Random fallback if no rig hit or no rigs active
         if (winIndex === -1) winIndex = Math.floor(Math.random() * segments.length);
 
         const arcDeg = 360 / segments.length;
@@ -185,12 +193,34 @@
         setTimeout(() => {
             const winner = segments[winIndex];
             const nameDisplay = document.getElementById('winner-name');
+            const donBtn = document.getElementById('don-btn');
+            
             nameDisplay.innerText = winner.name;
             nameDisplay.style.color = winner.color;
+            
+            // Matches button color to winner color
+            donBtn.style.backgroundColor = winner.color;
+            
+            if (isDonMode) {
+                donBtn.style.display = 'none';
+                document.getElementById('winner-msg').innerText = "IS THE RESULT!";
+            } else {
+                donBtn.style.display = 'inline-block';
+                document.getElementById('winner-msg').innerText = "HAS WON!";
+            }
+
             document.getElementById('win-overlay').style.display = 'flex';
             startConfetti();
             isSpinning = false;
         }, 5100);
+    }
+
+    function startDoubleOrNothing() {
+        originalNames = namesArea.value;
+        isDonMode = true;
+        namesArea.value = "DOUBLE\nNOTHING\nDOUBLE\nNOTHING\nDOUBLE\nNOTHING";
+        drawWheel();
+        document.getElementById('win-overlay').style.display = 'none';
     }
 
     function applyAndClose() {
@@ -235,6 +265,12 @@
         document.getElementById('win-overlay').style.display = 'none';
         confettiParticles = [];
         confCtx.clearRect(0,0,confCanvas.width, confCanvas.height);
+        
+        if (isDonMode) {
+            namesArea.value = originalNames;
+            isDonMode = false;
+            drawWheel();
+        }
     }
 
     function handleCenterTap() {
