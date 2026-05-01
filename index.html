@@ -3,86 +3,87 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>Pro Spinner - Double or Nothing Fix</title>
+    <title>ICC Fair Spinner</title>
     <style>
-        :root { --primary: #8b5cf6; --bg: #0f172a; --panel: #1e293b; --text: #ffffff; }
+        :root { --primary: #8b5cf6; --bg: #0f172a; --panel: #1e293b; --text: #ffffff; --danger: #ef4444; }
         
         body { 
-            font-family: 'Segoe UI', sans-serif; 
-            background: var(--bg); color: var(--text); 
+            font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); 
             display: flex; flex-direction: column; align-items: center; 
-            margin: 0; padding: 0; min-height: 100vh;
-            overflow-y: auto; 
-            overflow-x: hidden;
+            margin: 0; padding: 0; min-height: 100vh; overflow-y: auto; overflow-x: hidden;
         }
 
-        #ui-wrapper { 
-            display: flex; flex-direction: column; align-items: center; 
-            width: 100%; max-width: 450px; padding: 20px; box-sizing: border-box; 
+        /* SECURITY OVERLAYS */
+        .security-screen {
+            position: fixed; inset: 0; background: var(--bg); z-index: 1000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;
         }
+        .lock-card { background: var(--panel); padding: 30px; border-radius: 20px; text-align: center; width: 100%; max-width: 320px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+        .pass-input { width: 100%; padding: 15px; margin: 20px 0; border-radius: 10px; border: 1px solid #334155; background: #000; color: #fff; font-size: 24px; text-align: center; letter-spacing: 5px; box-sizing: border-box; }
+        .secure-btn { width: 100%; padding: 15px; background: var(--primary); border: none; border-radius: 10px; color: white; font-weight: bold; cursor: pointer; }
+        
+        #lockout-screen { display: none; background: #000; color: var(--danger); }
+        #entry-screen { display: flex; }
 
-        #wheel-container { 
-            position: relative; width: 300px; height: 300px; 
-            margin: 20px 0; display: flex; align-items: center; justify-content: center; 
-        }
-
-        canvas#wheel { 
-            width: 100%; height: 100%; border-radius: 50%; 
-            border: 6px solid #334155; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
-            z-index: 1; 
-        }
-
-        #pointer { 
-            position: absolute; top: -10px; left: 50%; transform: translateX(-50%); 
-            width: 0; height: 0; border-left: 15px solid transparent; border-right: 15px solid transparent; 
-            border-top: 30px solid #ff4757; z-index: 10; 
-            transform-origin: 50% 0%;
-            transition: transform 0.05s ease-out;
-        }
-
-        #center-hub { 
-            position: absolute; width: 50px; height: 50px; background: white; 
-            border-radius: 50%; border: 4px solid #334155; cursor: pointer; 
-            z-index: 20; display: flex; align-items: center; justify-content: center; 
-            color: #333; font-weight: 900; font-size: 10px; user-select: none;
-        }
-
+        /* MAIN APP UI */
+        #main-app { display: none; flex-direction: column; align-items: center; width: 100%; }
+        #ui-wrapper { display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 450px; padding: 20px; box-sizing: border-box; }
+        #wheel-container { position: relative; width: 300px; height: 300px; margin: 20px 0; display: flex; align-items: center; justify-content: center; }
+        canvas#wheel { width: 100%; height: 100%; border-radius: 50%; border: 6px solid #334155; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 1; }
+        #pointer { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 15px solid transparent; border-right: 15px solid transparent; border-top: 30px solid #ff4757; z-index: 10; transform-origin: 50% 0%; transition: transform 0.05s ease-out; }
+        #center-hub { position: absolute; width: 50px; height: 50px; background: white; border-radius: 50%; border: 4px solid #334155; cursor: pointer; z-index: 20; display: flex; align-items: center; justify-content: center; color: #333; font-weight: 900; font-size: 10px; user-select: none; }
         .input-area { width: 100%; margin-top: 10px; padding-bottom: 80px; }
-        textarea { 
-            width: 100%; height: 100px; padding: 12px; border-radius: 12px; 
-            border: 1px solid rgba(128, 128, 128, 0.3); 
-            background: var(--panel); color: var(--text); font-size: 16px; 
-            box-sizing: border-box; resize: none; margin-bottom: 10px;
-        }
-
-        #spin-btn { 
-            width: 100%; padding: 18px; border-radius: 12px; border: none; 
-            background: var(--primary); color: white; font-weight: bold; font-size: 18px; cursor: pointer; 
-        }
-
+        textarea { width: 100%; height: 100px; padding: 12px; border-radius: 12px; border: 1px solid rgba(128,128,128,0.3); background: var(--panel); color: var(--text); font-size: 16px; box-sizing: border-box; resize: none; margin-bottom: 10px; }
+        #spin-btn { width: 100%; padding: 18px; border-radius: 12px; border: none; background: var(--primary); color: white; font-weight: bold; font-size: 18px; cursor: pointer; }
+        
+        /* OVERLAYS */
         #win-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 200; align-items: center; justify-content: center; }
         .win-card { background: white; color: #1e293b; padding: 30px; border-radius: 20px; text-align: center; width: 85%; max-width: 320px; }
-        
         #don-btn { margin-top: 15px; padding: 12px 20px; color: white; border: none; border-radius: 8px; font-weight: 800; cursor: pointer; display: none; }
         #confetti-canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 201; }
-        #cd-panel { display: none; position: fixed; top: 10%; left: 50%; transform: translateX(-50%); background: var(--panel); padding: 20px; border-radius: 15px; border: 2px solid var(--primary); z-index: 300; width: 80%; max-width: 300px; }
+        
+        #console-pass-screen { display: none; }
+        #cd-panel { display: none; position: fixed; top: 10%; left: 50%; transform: translateX(-50%); background: var(--panel); padding: 20px; border-radius: 15px; border: 2px solid var(--primary); z-index: 500; width: 80%; max-width: 300px; }
     </style>
 </head>
 <body onclick="initAudio()">
 
-<canvas id="confetti-canvas"></canvas>
+<div id="lockout-screen" class="security-screen">
+    <h1 style="font-size: 50px;">LOCKED</h1>
+    <p>Too many failed attempts.</p>
+    <h2 id="lock-timer">10:00</h2>
+</div>
 
-<div id="ui-wrapper">
-    <div id="wheel-container">
-        <div id="pointer"></div>
-        <div id="center-hub" onclick="handleCenterTap()">SPIN</div>
-        <canvas id="wheel" width="600" height="600"></canvas>
+<div id="entry-screen" class="security-screen">
+    <div class="lock-card">
+        <h2>System Access</h2>
+        <input type="password" id="entry-pass" class="pass-input" placeholder="••••" maxlength="4">
+        <button class="secure-btn" onclick="checkEntryPass()">UNLOCK SYSTEM</button>
+        <p id="entry-status" style="color:var(--danger); margin-top:10px; font-size:12px;"></p>
     </div>
+</div>
 
-    <div class="input-area">
-        <textarea id="namesList" oninput="drawWheel()">Alex&#10;Jordan&#10;Taylor&#10;Casey&#10;Riley</textarea>
-        <button id="spin-btn" onclick="spin()">SPIN THE WHEEL</button>
+<div id="console-pass-screen" class="security-screen" onclick="this.style.display='none'">
+    <div class="lock-card" onclick="event.stopPropagation()">
+        <h2>Override Auth</h2>
+        <input type="password" id="console-pass" class="pass-input" placeholder="••••" maxlength="4">
+        <button class="secure-btn" onclick="checkConsolePass()">ACCESS CONSOLE</button>
+        <p id="console-status" style="color:var(--danger); margin-top:10px; font-size:12px;"></p>
+    </div>
+</div>
+
+<div id="main-app">
+    <canvas id="confetti-canvas"></canvas>
+    <div id="ui-wrapper">
+        <div id="wheel-container">
+            <div id="pointer"></div>
+            <div id="center-hub" onclick="handleCenterTap()">SPIN</div>
+            <canvas id="wheel" width="600" height="600"></canvas>
+        </div>
+        <div class="input-area">
+            <textarea id="namesList" oninput="drawWheel()">Alex&#10;Jordan&#10;Taylor&#10;Casey&#10;Riley</textarea>
+            <button id="spin-btn" onclick="spin()">SPIN THE WHEEL</button>
+        </div>
     </div>
 </div>
 
@@ -101,6 +102,66 @@
 </div>
 
 <script>
+    // --- SECURITY LOGIC ---
+    let attempts = parseInt(localStorage.getItem('spin_attempts')) || 0;
+    
+    function checkLockout() {
+        const lockoutTime = localStorage.getItem('spin_lockout_expiry');
+        if (lockoutTime) {
+            const remaining = lockoutTime - Date.now();
+            if (remaining > 0) {
+                document.getElementById('lockout-screen').style.display = 'flex';
+                const mins = Math.floor(remaining / 60000);
+                const secs = Math.floor((remaining % 60000) / 1000);
+                document.getElementById('lock-timer').innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+                setTimeout(checkLockout, 1000);
+                return true;
+            } else {
+                localStorage.removeItem('spin_lockout_expiry');
+                localStorage.setItem('spin_attempts', '0');
+                attempts = 0;
+                document.getElementById('lockout-screen').style.display = 'none';
+            }
+        }
+        return false;
+    }
+
+    function failAttempt(statusId) {
+        attempts++;
+        localStorage.setItem('spin_attempts', attempts);
+        if (attempts >= 3) {
+            const expiry = Date.now() + (10 * 60 * 1000);
+            localStorage.setItem('spin_lockout_expiry', expiry);
+            checkLockout();
+        } else {
+            document.getElementById(statusId).innerText = `Incorrect. ${3 - attempts} attempts left.`;
+        }
+    }
+
+    function checkEntryPass() {
+        if (checkLockout()) return;
+        const pass = document.getElementById('entry-pass').value;
+        if (pass === "2125") {
+            document.getElementById('entry-screen').style.display = 'none';
+            document.getElementById('main-app').style.display = 'flex';
+            drawWheel();
+        } else {
+            failAttempt('entry-status');
+        }
+    }
+
+    function checkConsolePass() {
+        if (checkLockout()) return;
+        const pass = document.getElementById('console-pass').value;
+        if (pass === "2413") {
+            document.getElementById('console-pass-screen').style.display = 'none';
+            document.getElementById('cd-panel').style.display = 'block';
+        } else {
+            failAttempt('console-status');
+        }
+    }
+
+    // --- WHEEL LOGIC ---
     const canvas = document.getElementById('wheel');
     const ctx = canvas.getContext('2d');
     const namesArea = document.getElementById('namesList');
@@ -109,18 +170,8 @@
     const confCanvas = document.getElementById('confetti-canvas');
     const confCtx = confCanvas.getContext('2d');
     
-    let segments = [];
-    let isSpinning = false;
-    let rotation = 0;      
-    let velocity = 0;      
-    let friction = 0.993;  
-    let lastTickIdx = -1;
-    let activeCommand = ""; 
-    let confettiParticles = [];
-    let originalNames = "";
-    let isDonMode = false;
-    let tapCount = 0;
-    let tapTimer;
+    let segments = [], isSpinning = false, rotation = 0, velocity = 0, friction = 0.993, lastTickIdx = -1;
+    let activeCommand = "", confettiParticles = [], isDonMode = false, originalNames = "", tapCount = 0, tapTimer;
 
     let audioCtx;
     const cheerAudio = new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3');
@@ -134,8 +185,7 @@
         if (!audioCtx) return;
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+        osc.type = 'sine'; osc.frequency.setValueAtTime(400, audioCtx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.04);
         gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.04);
@@ -146,19 +196,7 @@
     }
 
     function playCheer() {
-        cheerAudio.play().catch(() => {
-            const filter = audioCtx.createBiquadFilter();
-            const noise = audioCtx.createBufferSource();
-            const gain = audioCtx.createGain();
-            const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 2, audioCtx.sampleRate);
-            const data = buffer.getChannelData(0);
-            for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
-            noise.buffer = buffer; filter.type = 'lowpass'; filter.frequency.value = 1000;
-            gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.5);
-            noise.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
-            noise.start();
-        });
+        cheerAudio.play().catch(() => {});
     }
 
     function drawWheel() {
@@ -175,8 +213,7 @@
         ctx.clearRect(0, 0, 600, 600);
         segments.forEach((s, i) => {
             const angle = i * arc + rotation;
-            ctx.beginPath();
-            ctx.fillStyle = s.color; ctx.moveTo(300, 300);
+            ctx.beginPath(); ctx.fillStyle = s.color; ctx.moveTo(300, 300);
             ctx.arc(300, 300, 290, angle, angle + arc);
             ctx.lineTo(300, 300); ctx.fill();
             ctx.save(); ctx.translate(300, 300); ctx.rotate(angle + arc/2);
@@ -187,11 +224,9 @@
 
     function spin() {
         if (isSpinning || segments.length === 0) return;
-        initAudio();
-        isSpinning = true;
+        initAudio(); isSpinning = true;
         let winIndex = -1;
         const cmd = activeCommand.toLowerCase();
-        
         if (cmd.startsWith('/alm')) {
             const target = cmd.replace('/alm', '').trim();
             const idx = segments.findIndex(s => s.name.toLowerCase() === target);
@@ -209,24 +244,17 @@
             }
         }
         if (winIndex === -1) winIndex = Math.floor(Math.random() * segments.length);
-        velocity = 0.5 + (Math.random() * 0.2); 
-        animate();
+        velocity = 0.5 + (Math.random() * 0.2); animate();
     }
 
     function animate() {
         if (!isSpinning) return;
-        rotation += velocity;
-        velocity *= friction;
+        rotation += velocity; velocity *= friction;
         const arcSize = (Math.PI * 2) / segments.length;
         const currentTickIdx = Math.floor(((Math.PI * 1.5) - (rotation % (Math.PI * 2)) + (Math.PI * 2)) % (Math.PI * 2) / arcSize);
         if (currentTickIdx !== lastTickIdx) { playTick(); lastTickIdx = currentTickIdx; }
-        if (velocity < 0.0012) {
-            velocity = 0; isSpinning = false;
-            finalize();
-        } else {
-            render();
-            requestAnimationFrame(animate);
-        }
+        if (velocity < 0.0012) { velocity = 0; isSpinning = false; finalize(); }
+        else { render(); requestAnimationFrame(animate); }
     }
 
     function finalize() {
@@ -234,52 +262,31 @@
         const normalized = (rotation % (Math.PI * 2) + (Math.PI * 2)) % (Math.PI * 2);
         const winIdx = Math.floor(((Math.PI * 1.5) - normalized + (Math.PI * 2)) % (Math.PI * 2) / arcSize);
         const winner = segments[winIdx % segments.length];
-        
         playCheer();
         document.getElementById('winner-name').innerText = winner.name;
         document.getElementById('winner-name').style.color = winner.color;
         document.getElementById('don-btn').style.backgroundColor = winner.color;
-        
-        // Logical check for Double or Nothing mode
-        if (isDonMode) {
-            document.getElementById('don-btn').style.display = 'none';
-            document.getElementById('winner-msg').innerText = "IS THE FINAL RESULT!";
-        } else {
-            document.getElementById('don-btn').style.display = 'inline-block';
-            document.getElementById('winner-msg').innerText = "HAS WON!";
-        }
-        
+        document.getElementById('don-btn').style.display = isDonMode ? 'none' : 'inline-block';
+        document.getElementById('winner-msg').innerText = isDonMode ? "IS THE FINAL RESULT!" : "HAS WON!";
         document.getElementById('win-overlay').style.display = 'flex';
         startConfetti();
     }
 
     function startDoubleOrNothing() {
-        originalNames = namesArea.value;
-        isDonMode = true;
-        // Temporarily change wheel segments
-        namesArea.value = "DOUBLE\nNOTHING\nDOUBLE\nNOTHING\nDOUBLE\nNOTHING\nDOUBLE\nNOTHING";
-        drawWheel();
-        document.getElementById('win-overlay').style.display = 'none';
-        // Give a short delay then spin
+        originalNames = namesArea.value; isDonMode = true;
+        namesArea.value = "DOUBLE\nNOTHING\nDOUBLE\nNOTHING\nDOUBLE\nNOTHING";
+        drawWheel(); document.getElementById('win-overlay').style.display = 'none';
         setTimeout(() => spin(), 500);
-    }
-
-    function closeWinner() {
-        document.getElementById('win-overlay').style.display = 'none';
-        cheerAudio.pause(); cheerAudio.currentTime = 0;
-        if (isDonMode) {
-            // Restore original list after the gamble is done
-            namesArea.value = originalNames;
-            isDonMode = false;
-            drawWheel();
-        }
     }
 
     function handleCenterTap() {
         tapCount++;
         clearTimeout(tapTimer);
         tapTimer = setTimeout(() => tapCount = 0, 500);
-        if (tapCount >= 5) { document.getElementById('cd-panel').style.display = 'block'; tapCount = 0; }
+        if (tapCount >= 5) { 
+            document.getElementById('console-pass-screen').style.display = 'flex'; 
+            tapCount = 0; 
+        }
         else if (!isSpinning) spin();
     }
 
@@ -290,8 +297,7 @@
     }
 
     function startConfetti() {
-        confCanvas.width = window.innerWidth;
-        confCanvas.height = window.innerHeight;
+        confCanvas.width = window.innerWidth; confCanvas.height = window.innerHeight;
         confettiParticles = [];
         const winnerColor = document.getElementById('winner-name').style.color;
         for (let i = 0; i < 80; i++) {
@@ -318,7 +324,15 @@
         requestAnimationFrame(animateConf);
     }
 
-    drawWheel();
+    function closeWinner() {
+        document.getElementById('win-overlay').style.display = 'none';
+        if (isDonMode) {
+            namesArea.value = originalNames; isDonMode = false; drawWheel();
+        }
+    }
+
+    // Run on startup
+    checkLockout();
 </script>
 </body>
 </html>
