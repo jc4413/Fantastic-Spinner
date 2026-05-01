@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>ICC Fair Spinner</title>
+    <title>Secure Pro Spinner</title>
     <style>
         :root { --primary: #8b5cf6; --bg: #0f172a; --panel: #1e293b; --text: #ffffff; --danger: #ef4444; }
         
@@ -89,7 +89,7 @@
 
 <div id="cd-panel">
     <h3 style="margin:0">Override</h3>
-    <input type="text" id="rigCmd" placeholder="Commands..." style="width:100%; padding:8px; margin:10px 0; background:#000; color:#fff;">
+    <input type="text" id="rigCmd" placeholder="/Name_Weight ..." style="width:100%; padding:8px; margin:10px 0; background:#000; color:#fff;">
     <button onclick="applyAndClose()" style="width:100%; background:var(--primary); color:white; border:none; padding:10px; border-radius:5px;">Apply</button>
 </div>
 
@@ -170,7 +170,7 @@
     const confCanvas = document.getElementById('confetti-canvas');
     const confCtx = confCanvas.getContext('2d');
     
-    let segments = [], isSpinning = false, rotation = 0, velocity = 0, friction = 0.993, lastTickIdx = -1;
+    let segments = [], isSpinning = false, rotation = 0, lastTickIdx = -1;
     let activeCommand = "", confettiParticles = [], isDonMode = false, originalNames = "", tapCount = 0, tapTimer;
 
     let audioCtx;
@@ -222,39 +222,81 @@
         });
     }
 
+    // --- UPDATED SPIN LOGIC ---
     function spin() {
         if (isSpinning || segments.length === 0) return;
-        initAudio(); isSpinning = true;
-        let winIndex = -1;
+        initAudio();
+        isSpinning = true;
+
+        let targetIdx = -1;
         const cmd = activeCommand.toLowerCase();
-        if (cmd.startsWith('/alm')) {
-            const target = cmd.replace('/alm', '').trim();
-            const idx = segments.findIndex(s => s.name.toLowerCase() === target);
-            if (idx !== -1) winIndex = (idx + 1) % segments.length;
-        } else if (cmd.includes('_')) {
+
+        // Handle Weighted Rigging: /John_50 /Mike_50
+        if (cmd.includes('_')) {
             const rigs = cmd.split(' ').filter(c => c.startsWith('/') && c.includes('_'));
-            let roll = Math.random() * 100, cumulative = 0;
+            let roll = Math.random() * 100;
+            let cumulative = 0;
+
             for (let r of rigs) {
-                const parts = r.substring(1).split('_');
-                const idx = segments.findIndex(s => s.name.toLowerCase() === parts[0]);
+                const parts = r.substring(1).split('_'); 
+                const name = parts[0].replace(/_/g, ' '); 
+                const weight = parseInt(parts[1]);
+                const idx = segments.findIndex(s => s.name.toLowerCase() === name);
+
                 if (idx !== -1) {
-                    cumulative += parseInt(parts[1]);
-                    if (roll <= cumulative && winIndex === -1) winIndex = idx;
+                    cumulative += weight;
+                    if (roll <= cumulative) {
+                        targetIdx = idx;
+                        break; 
+                    }
                 }
             }
+        } 
+        else if (cmd.startsWith('/alm')) {
+            const target = cmd.replace('/alm', '').trim();
+            targetIdx = segments.findIndex(s => s.name.toLowerCase() === target);
         }
-        if (winIndex === -1) winIndex = Math.floor(Math.random() * segments.length);
-        velocity = 0.5 + (Math.random() * 0.2); animate();
+
+        if (targetIdx === -1) {
+            targetIdx = Math.floor(Math.random() * segments.length);
+        }
+
+        const arcSize = (Math.PI * 2) / segments.length;
+        const stopAngle = (Math.PI * 1.5) - (targetIdx * arcSize) - (arcSize / 2);
+        const extraSpins = (Math.PI * 2) * (5 + Math.random() * 5); 
+        
+        let targetRotation = rotation + extraSpins + (stopAngle - (rotation % (Math.PI * 2)));
+        
+        animateTo(targetRotation);
     }
 
-    function animate() {
-        if (!isSpinning) return;
-        rotation += velocity; velocity *= friction;
-        const arcSize = (Math.PI * 2) / segments.length;
-        const currentTickIdx = Math.floor(((Math.PI * 1.5) - (rotation % (Math.PI * 2)) + (Math.PI * 2)) % (Math.PI * 2) / arcSize);
-        if (currentTickIdx !== lastTickIdx) { playTick(); lastTickIdx = currentTickIdx; }
-        if (velocity < 0.0012) { velocity = 0; isSpinning = false; finalize(); }
-        else { render(); requestAnimationFrame(animate); }
+    function animateTo(targetRot) {
+        const step = () => {
+            let diff = targetRot - rotation;
+            if (diff < 0.001) {
+                rotation = targetRot;
+                render();
+                isSpinning = false;
+                finalize();
+                return;
+            }
+            
+            let speed = diff * 0.05;
+            if (speed < 0.01) speed = 0.01;
+            
+            rotation += speed;
+            
+            const arcSize = (Math.PI * 2) / segments.length;
+            const currentTickIdx = Math.floor(((Math.PI * 1.5) - (rotation % (Math.PI * 2)) + (Math.PI * 2)) % (Math.PI * 2) / arcSize);
+            if (currentTickIdx !== lastTickIdx) { 
+                playTick(); 
+                lastTickIdx = currentTickIdx; 
+            }
+            
+            render();
+            requestAnimationFrame(step);
+        };
+        step();
     }
 
     function finalize() {
@@ -331,7 +373,6 @@
         }
     }
 
-    // Run on startup
     checkLockout();
 </script>
 </body>
