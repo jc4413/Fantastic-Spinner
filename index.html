@@ -38,7 +38,6 @@
             border-radius: 12px; color: white; font-weight: bold; cursor: pointer; 
             font-size: 16px; transition: transform 0.1s;
         }
-        .secure-btn:active { transform: scale(0.98); }
 
         .retry-btn {
             margin-top: 20px; background: transparent; border: 1px solid #334155;
@@ -73,21 +72,14 @@
             background: var(--panel); color: var(--text); font-size: 16px; box-sizing: border-box; resize: none; margin-bottom: 20px; 
         }
 
-        /* --- THE CENTERING FIX --- */
+        /* CENTERED BUTTON */
         #spin-btn { 
             display: block; 
             margin: 0 auto; 
             width: 100%; 
             max-width: 320px;
             padding: 20px; 
-            border-radius: 15px; 
-            border: none; 
-            background: var(--primary); 
-            color: white; 
-            font-weight: bold; 
-            font-size: 18px; 
-            cursor: pointer; 
-            box-shadow: 0 10px 20px rgba(139, 92, 246, 0.3); 
+            border-radius: 15px; border: none; background: var(--primary); color: white; font-weight: bold; font-size: 18px; cursor: pointer; box-shadow: 0 10px 20px rgba(139, 92, 246, 0.3); 
         }
 
         /* --- OVERLAYS --- */
@@ -105,7 +97,6 @@
 
 <div id="lockout-screen" class="security-screen">
     <h1 style="font-size: 50px; margin: 0;">LOCKED</h1>
-    <p style="opacity: 0.7;">Security violation detected. Access suspended.</p>
     <h2 id="lock-timer" style="font-size: 70px; font-family: monospace; margin: 20px 0;">5:00</h2>
     <button class="retry-btn" onclick="attemptRetry()">RETRY CONNECTION</button>
 </div>
@@ -113,7 +104,6 @@
 <div id="entry-screen" class="security-screen">
     <div class="lock-card">
         <h2 style="margin:0">System Access</h2>
-        <p style="font-size: 12px; opacity: 0.6;">Encrypted Terminal</p>
         <input type="password" id="entry-pass" class="pass-input" placeholder="••••" maxlength="4" autofocus>
         <button class="secure-btn" onclick="checkEntryPass()">UNLOCK SYSTEM</button>
         <p id="entry-status" style="color:var(--danger); margin-top:15px; font-size:13px; font-weight: bold;"></p>
@@ -145,7 +135,8 @@
 </div>
 
 <div id="cd-panel">
-    <h3 style="margin:0 0 10px 0; color:var(--primary);">Override Logic</h3>
+    <h3 style="margin:0; color:var(--primary);">Override Logic</h3>
+    <p style="font-size: 11px; margin: 5px 0;">Multi-Rig Example: /John_50 /Mike_50</p>
     <input type="text" id="rigCmd" placeholder="/Name_Weight" style="width:100%; padding:12px; margin:10px 0; border-radius:8px; border:none; background:#000; color:#fff;">
     <button onclick="applyAndClose()" style="width:100%; background:var(--primary); color:white; border:none; padding:12px; border-radius:8px; font-weight:bold;">APPLY COMMAND</button>
 </div>
@@ -161,10 +152,8 @@
 <script>
     const REAL_COOLDOWN = 1.5 * 60 * 1000; 
     const VISUAL_COOLDOWN = 5 * 60 * 1000; 
-    
     let attempts = parseInt(localStorage.getItem('spin_attempts')) || 0;
-    let audioCtx;
-    let segments = [], isSpinning = false, rotation = 0, lastTickIdx = -1;
+    let audioCtx, segments = [], isSpinning = false, rotation = 0, lastTickIdx = -1;
     let activeCommand = "", isDonMode = false, originalNames = "";
     let tapCount = 0, tapTimer;
 
@@ -203,9 +192,7 @@
         document.getElementById('lockout-screen').style.display = 'none';
     }
 
-    function attemptRetry() {
-        if (Date.now() >= localStorage.getItem('spin_lockout_expiry')) resetSecurity();
-    }
+    function attemptRetry() { if (Date.now() >= localStorage.getItem('spin_lockout_expiry')) resetSecurity(); }
 
     function checkEntryPass() {
         if (document.getElementById('entry-pass').value === "2125") {
@@ -221,9 +208,7 @@
         if (attempts >= 3) {
             localStorage.setItem('spin_lockout_expiry', Date.now() + REAL_COOLDOWN);
             checkLockout();
-        } else {
-            document.getElementById(id).innerText = `ACCESS DENIED. ${3-attempts} LEFT.`;
-        }
+        } else { document.getElementById(id).innerText = `ACCESS DENIED. ${3-attempts} LEFT.`; }
     }
 
     function drawWheel() {
@@ -269,14 +254,37 @@
         initAudio();
         isSpinning = true;
         let targetIdx = -1;
-        if (activeCommand.includes('_')) {
-            const parts = activeCommand.substring(1).split('_');
-            if (Math.random() * 100 <= parseInt(parts[1])) targetIdx = segments.findIndex(s => s.name.toLowerCase() === parts[0].toLowerCase());
+
+        // MULTI-RIG LOGIC
+        if (activeCommand.startsWith('/')) {
+            const rigPairs = activeCommand.split(' ').filter(p => p.startsWith('/') && p.includes('_'));
+            let rigPool = [];
+            
+            rigPairs.forEach(pair => {
+                const parts = pair.substring(1).split('_');
+                const name = parts[0].toLowerCase();
+                const weight = parseInt(parts[1]);
+                const actualIdx = segments.findIndex(s => s.name.toLowerCase() === name);
+                if (actualIdx !== -1) {
+                    for (let i = 0; i < weight; i++) rigPool.push(actualIdx);
+                }
+            });
+
+            // If total weights = 100, no one else can win.
+            // If total weights < 100, fill remaining pool with others for true random fallback.
+            if (rigPool.length > 0) {
+                const roll = Math.floor(Math.random() * 100);
+                if (roll < rigPool.length) {
+                    targetIdx = rigPool[roll];
+                }
+            }
         }
+
         if (targetIdx === -1) targetIdx = Math.floor(Math.random() * segments.length);
         const arc = (Math.PI * 2) / segments.length;
         const stopAngle = (Math.PI * 1.5) - (targetIdx * arc) - (arc / 2);
         const finalRot = rotation + (Math.PI * 2 * 7) + (stopAngle - (rotation % (Math.PI * 2)));
+        
         const animate = () => {
             let diff = finalRot - rotation;
             if (diff < 0.001) { isSpinning = false; finalize(targetIdx); return; }
