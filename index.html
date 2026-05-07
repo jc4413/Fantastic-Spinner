@@ -67,21 +67,27 @@
             font-weight: 900; font-size: 11px; user-select: none; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
 
-        .input-area { 
-            width: 100%; 
-            margin-top: 15px; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; /* Centering the children */
-        }
+        .input-area { width: 100%; margin-top: 15px; text-align: center; }
         textarea { 
             width: 100%; height: 110px; padding: 15px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); 
-            background: var(--panel); color: var(--text); font-size: 16px; box-sizing: border-box; resize: none; margin-bottom: 15px; 
+            background: var(--panel); color: var(--text); font-size: 16px; box-sizing: border-box; resize: none; margin-bottom: 20px; 
         }
+
+        /* --- THE CENTERING FIX --- */
         #spin-btn { 
-            width: 80%; /* Reduced width to show centering better, or keep at 100% */
-            max-width: 300px;
-            padding: 20px; border-radius: 15px; border: none; background: var(--primary); color: white; font-weight: bold; font-size: 18px; cursor: pointer; box-shadow: 0 10px 20px rgba(139, 92, 246, 0.3); 
+            display: block; 
+            margin: 0 auto; 
+            width: 100%; 
+            max-width: 320px;
+            padding: 20px; 
+            border-radius: 15px; 
+            border: none; 
+            background: var(--primary); 
+            color: white; 
+            font-weight: bold; 
+            font-size: 18px; 
+            cursor: pointer; 
+            box-shadow: 0 10px 20px rgba(139, 92, 246, 0.3); 
         }
 
         /* --- OVERLAYS --- */
@@ -140,7 +146,6 @@
 
 <div id="cd-panel">
     <h3 style="margin:0 0 10px 0; color:var(--primary);">Override Logic</h3>
-    <p style="font-size: 11px; margin-bottom: 10px; opacity: 0.8;">Format: /Name_Probability (e.g. /Alex_70)</p>
     <input type="text" id="rigCmd" placeholder="/Name_Weight" style="width:100%; padding:12px; margin:10px 0; border-radius:8px; border:none; background:#000; color:#fff;">
     <button onclick="applyAndClose()" style="width:100%; background:var(--primary); color:white; border:none; padding:12px; border-radius:8px; font-weight:bold;">APPLY COMMAND</button>
 </div>
@@ -154,7 +159,6 @@
 </div>
 
 <script>
-    // --- SETTINGS & STATE ---
     const REAL_COOLDOWN = 1.5 * 60 * 1000; 
     const VISUAL_COOLDOWN = 5 * 60 * 1000; 
     
@@ -170,43 +174,26 @@
     const confCanvas = document.getElementById('confetti-canvas');
     const confCtx = confCanvas.getContext('2d');
 
-    // --- INITIALIZATION ---
     function initAudio() { 
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         if (audioCtx.state === 'suspended') audioCtx.resume(); 
     }
 
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            if (document.getElementById('entry-screen').style.display !== 'none') checkEntryPass();
-            else if (document.getElementById('console-pass-screen').style.display === 'flex') checkConsolePass();
-        }
-    });
-
-    // --- SECURITY LOGIC ---
     function checkLockout() {
         const expiry = localStorage.getItem('spin_lockout_expiry');
         if (expiry) {
             const realLeft = expiry - Date.now();
             if (realLeft > 0) {
                 document.getElementById('lockout-screen').style.display = 'flex';
-                const elapsed = REAL_COOLDOWN - realLeft;
-                const visualLeft = Math.max(0, VISUAL_COOLDOWN - elapsed);
+                const visualLeft = Math.max(0, VISUAL_COOLDOWN - (REAL_COOLDOWN - realLeft));
                 const mins = Math.floor(visualLeft / 60000);
                 const secs = Math.floor((visualLeft % 60000) / 1000);
                 document.getElementById('lock-timer').innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
                 setTimeout(checkLockout, 1000);
                 return true;
-            } else {
-                resetSecurity();
-            }
+            } else { resetSecurity(); }
         }
         return false;
-    }
-
-    function attemptRetry() {
-        const expiry = localStorage.getItem('spin_lockout_expiry');
-        if (Date.now() >= expiry) resetSecurity();
     }
 
     function resetSecurity() {
@@ -214,19 +201,18 @@
         localStorage.setItem('spin_attempts', '0');
         attempts = 0;
         document.getElementById('lockout-screen').style.display = 'none';
-        document.getElementById('entry-status').innerText = "";
+    }
+
+    function attemptRetry() {
+        if (Date.now() >= localStorage.getItem('spin_lockout_expiry')) resetSecurity();
     }
 
     function checkEntryPass() {
-        if (checkLockout()) return;
-        const pass = document.getElementById('entry-pass').value;
-        if (pass === "2125") {
+        if (document.getElementById('entry-pass').value === "2125") {
             document.getElementById('entry-screen').style.display = 'none';
             document.getElementById('main-app').style.display = 'flex';
             drawWheel();
-        } else {
-            failAttempt('entry-status');
-        }
+        } else { failAttempt('entry-status'); }
     }
 
     function failAttempt(id) {
@@ -236,12 +222,10 @@
             localStorage.setItem('spin_lockout_expiry', Date.now() + REAL_COOLDOWN);
             checkLockout();
         } else {
-            document.getElementById(id).innerText = `ACCESS DENIED. ${3-attempts} ATTEMPTS REMAINING.`;
-            document.getElementById('entry-pass').value = "";
+            document.getElementById(id).innerText = `ACCESS DENIED. ${3-attempts} LEFT.`;
         }
     }
 
-    // --- WHEEL DRAWING ---
     function drawWheel() {
         const names = namesArea.value.split('\n').filter(t => t.trim() !== "");
         segments = names.map((n, i) => ({ 
@@ -266,19 +250,17 @@
         });
     }
 
-    // --- SPIN LOGIC ---
     function playTick() {
         if (!audioCtx) return;
         const osc = audioCtx.createOscillator();
         const g = audioCtx.createGain();
         osc.frequency.setValueAtTime(450, audioCtx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.04);
-        g.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        g.gain.setValueAtTime(0.1, audioCtx.currentTime);
         g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.04);
         osc.connect(g); g.connect(audioCtx.destination);
         osc.start(); osc.stop(audioCtx.currentTime + 0.04);
-        
-        document.getElementById('pointer').style.transform = "translateX(-50%) rotate(-18deg)";
+        document.getElementById('pointer').style.transform = "translateX(-50%) rotate(-15deg)";
         setTimeout(() => document.getElementById('pointer').style.transform = "translateX(-50%) rotate(0deg)", 40);
     }
 
@@ -286,41 +268,21 @@
         if (isSpinning || !segments.length) return;
         initAudio();
         isSpinning = true;
-        
         let targetIdx = -1;
-        
-        if (activeCommand.startsWith('/') && activeCommand.includes('_')) {
+        if (activeCommand.includes('_')) {
             const parts = activeCommand.substring(1).split('_');
-            const name = parts[0].toLowerCase();
-            const weight = parseInt(parts[1]);
-            if (Math.random() * 100 <= weight) {
-                targetIdx = segments.findIndex(s => s.name.toLowerCase() === name);
-            }
+            if (Math.random() * 100 <= parseInt(parts[1])) targetIdx = segments.findIndex(s => s.name.toLowerCase() === parts[0].toLowerCase());
         }
-
         if (targetIdx === -1) targetIdx = Math.floor(Math.random() * segments.length);
-
         const arc = (Math.PI * 2) / segments.length;
         const stopAngle = (Math.PI * 1.5) - (targetIdx * arc) - (arc / 2);
         const finalRot = rotation + (Math.PI * 2 * 7) + (stopAngle - (rotation % (Math.PI * 2)));
-        
         const animate = () => {
             let diff = finalRot - rotation;
-            if (diff < 0.001) {
-                isSpinning = false;
-                finalize(targetIdx);
-                return;
-            }
-            let step = diff * 0.05;
-            if (step < 0.005) step = 0.005;
-            rotation += step;
-            
+            if (diff < 0.001) { isSpinning = false; finalize(targetIdx); return; }
+            rotation += diff * 0.05;
             let currentIdx = Math.floor(((Math.PI * 1.5) - (rotation % (Math.PI * 2)) + (Math.PI * 2)) % (Math.PI * 2) / arc);
-            if (currentIdx !== lastTickIdx) {
-                playTick();
-                lastTickIdx = currentIdx;
-            }
-            
+            if (currentIdx !== lastTickIdx) { playTick(); lastTickIdx = currentIdx; }
             render();
             requestAnimationFrame(animate);
         };
@@ -329,43 +291,32 @@
 
     function finalize(idx) {
         const winner = segments[idx % segments.length];
-        const overlay = document.getElementById('win-overlay');
         document.getElementById('winner-name').innerText = winner.name;
         document.getElementById('winner-name').style.color = winner.color;
-        document.getElementById('winner-msg').innerText = isDonMode ? "FINAL RESULT!" : "HAS WON!";
         document.getElementById('don-btn').style.display = isDonMode ? 'none' : 'block';
         document.getElementById('don-btn').style.backgroundColor = winner.color;
-        overlay.style.display = 'flex';
+        document.getElementById('win-overlay').style.display = 'flex';
         startConfetti(winner.color);
     }
 
-    // --- EXTRA MODES ---
     function startDoubleOrNothing() {
-        originalNames = namesArea.value;
-        isDonMode = true;
+        originalNames = namesArea.value; isDonMode = true;
         namesArea.value = "DOUBLE\nNOTHING\nDOUBLE\nNOTHING";
-        drawWheel();
-        document.getElementById('win-overlay').style.display = 'none';
+        drawWheel(); document.getElementById('win-overlay').style.display = 'none';
         setTimeout(spin, 600);
     }
 
     function closeWinner() {
         document.getElementById('win-overlay').style.display = 'none';
-        if (isDonMode) {
-            namesArea.value = originalNames;
-            isDonMode = false;
-            drawWheel();
-        }
+        if (isDonMode) { namesArea.value = originalNames; isDonMode = false; drawWheel(); }
     }
 
     function handleCenterTap() {
         tapCount++;
         clearTimeout(tapTimer);
         tapTimer = setTimeout(() => tapCount = 0, 500);
-        if (tapCount >= 5) {
-            document.getElementById('console-pass-screen').style.display = 'flex';
-            tapCount = 0;
-        } else if (!isSpinning) spin();
+        if (tapCount >= 5) { document.getElementById('console-pass-screen').style.display = 'flex'; tapCount = 0; }
+        else if (!isSpinning) spin();
     }
 
     function checkConsolePass() {
@@ -381,24 +332,17 @@
         document.getElementById('cd-panel').style.display = 'none';
     }
 
-    // --- VISUALS ---
     function startConfetti(color) {
         confCanvas.width = window.innerWidth; confCanvas.height = window.innerHeight;
         let p = [];
-        for(let i=0; i<100; i++) p.push({
-            x: Math.random()*confCanvas.width, y:-20,
-            s: Math.random()*8+4, c: color,
-            vY: Math.random()*5+2, vX: Math.random()*4-2, r: Math.random()*360
-        });
+        for(let i=0; i<100; i++) p.push({x: Math.random()*confCanvas.width, y:-20, s: Math.random()*8+4, c: color, vY: Math.random()*5+2, vX: Math.random()*4-2, r: Math.random()*360});
         const anim = () => {
             if(!p.length) return;
             confCtx.clearRect(0,0,confCanvas.width, confCanvas.height);
             p.forEach((item, i) => {
                 item.y += item.vY; item.x += item.vX; item.r += 5;
                 confCtx.save(); confCtx.fillStyle = item.c; confCtx.translate(item.x, item.y);
-                confCtx.rotate(item.r * Math.PI/180);
-                confCtx.fillRect(-item.s/2, -item.s/2, item.s, item.s);
-                confCtx.restore();
+                confCtx.rotate(item.r * Math.PI/180); confCtx.fillRect(-item.s/2, -item.s/2, item.s, item.s); confCtx.restore();
                 if(item.y > confCanvas.height) p.splice(i, 1);
             });
             requestAnimationFrame(anim);
