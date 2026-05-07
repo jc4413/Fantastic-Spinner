@@ -179,7 +179,7 @@
         isSpinning = true;
         let targetIdx = -1;
 
-        // FIXED RIGGING LOGIC
+        // FIXED RIGGING LOGIC - EXCLUSIVE TO COMMAND NAMES
         if (activeCommand.startsWith('/')) {
             const rigPairs = activeCommand.split(' ').filter(p => p.startsWith('/') && p.includes('_'));
             let weightMap = [];
@@ -189,18 +189,14 @@
                 const name = parts[0].toLowerCase();
                 const weight = parseInt(parts[1]);
                 const foundIdx = segments.findIndex(s => s.name.toLowerCase() === name);
-                if (foundIdx !== -1) {
+                if (foundIdx !== -1 && !isNaN(weight)) {
                     for(let i=0; i<weight; i++) weightMap.push(foundIdx);
                 }
             });
 
             if (weightMap.length > 0) {
-                // We create a pool based on the TOTAL weights provided.
-                // If weight total is 100, Bob (who isn't in weightMap) has 0 chance.
-                const roll = Math.floor(Math.random() * 100);
-                if (roll < weightMap.length) {
-                    targetIdx = weightMap[roll];
-                }
+                const roll = Math.floor(Math.random() * weightMap.length);
+                targetIdx = weightMap[roll];
             }
         }
 
