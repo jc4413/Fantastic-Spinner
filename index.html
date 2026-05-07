@@ -13,7 +13,6 @@
             margin: 0; padding: 0; min-height: 100vh; overflow-y: auto; overflow-x: hidden;
         }
 
-        /* SECURITY OVERLAYS */
         .security-screen {
             position: fixed; inset: 0; background: var(--bg); z-index: 1000;
             display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;
@@ -22,10 +21,9 @@
         .pass-input { width: 100%; padding: 15px; margin: 20px 0; border-radius: 10px; border: 1px solid #334155; background: #000; color: #fff; font-size: 24px; text-align: center; letter-spacing: 5px; box-sizing: border-box; }
         .secure-btn { width: 100%; padding: 15px; background: var(--primary); border: none; border-radius: 10px; color: white; font-weight: bold; cursor: pointer; }
         
-        #lockout-screen { display: none; background: #000; color: var(--danger); }
+        #lockout-screen { display: none; background: #000; color: var(--danger); flex-direction: column; text-align: center; }
         #entry-screen { display: flex; }
 
-        /* MAIN APP UI */
         #main-app { display: none; flex-direction: column; align-items: center; width: 100%; }
         #ui-wrapper { display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 450px; padding: 20px; box-sizing: border-box; }
         #wheel-container { position: relative; width: 300px; height: 300px; margin: 20px 0; display: flex; align-items: center; justify-content: center; }
@@ -36,7 +34,6 @@
         textarea { width: 100%; height: 100px; padding: 12px; border-radius: 12px; border: 1px solid rgba(128,128,128,0.3); background: var(--panel); color: var(--text); font-size: 16px; box-sizing: border-box; resize: none; margin-bottom: 10px; }
         #spin-btn { width: 100%; padding: 18px; border-radius: 12px; border: none; background: var(--primary); color: white; font-weight: bold; font-size: 18px; cursor: pointer; }
         
-        /* OVERLAYS */
         #win-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 200; align-items: center; justify-content: center; }
         .win-card { background: white; color: #1e293b; padding: 30px; border-radius: 20px; text-align: center; width: 85%; max-width: 320px; }
         #don-btn { margin-top: 15px; padding: 12px 20px; color: white; border: none; border-radius: 8px; font-weight: 800; cursor: pointer; display: none; }
@@ -49,17 +46,18 @@
 <body onclick="initAudio()">
 
 <div id="lockout-screen" class="security-screen">
-    <h1 style="font-size: 50px;">LOCKED</h1>
-    <p>Too many failed attempts.</p>
-    <h2 id="lock-timer">10:00</h2>
+    <h1 style="font-size: 50px; margin-bottom: 10px;">LOCKED</h1>
+    <p style="font-size: 18px; opacity: 0.8;">Too many failed attempts.</p>
+    <h2 id="lock-timer" style="font-size: 64px; font-family: monospace; margin: 20px 0;">5:00</h2>
+    <p>Please wait for system reset...</p>
 </div>
 
 <div id="entry-screen" class="security-screen">
     <div class="lock-card">
         <h2>System Access</h2>
-        <input type="password" id="entry-pass" class="pass-input" placeholder="••••" maxlength="4">
+        <input type="password" id="entry-pass" class="pass-input" placeholder="••••" maxlength="4" autofocus>
         <button class="secure-btn" onclick="checkEntryPass()">UNLOCK SYSTEM</button>
-        <p id="entry-status" style="color:var(--danger); margin-top:10px; font-size:12px;"></p>
+        <p id="entry-status" style="color:var(--danger); margin-top:10px; font-size:14px; font-weight:bold;"></p>
     </div>
 </div>
 
@@ -102,24 +100,47 @@
 </div>
 
 <script>
-    // --- SECURITY LOGIC ---
-    let attempts = parseInt(localStorage.getItem('spin_attempts')) || 0;
+    // --- SECURITY CONFIG ---
+    const ACTUAL_LOCKOUT_MS = 1.5 * 60 * 1000; // 1.5 minutes
+    const DISPLAY_LOCKOUT_MS = 5.0 * 60 * 1000; // 5 minutes
+    
+    let lockoutInterval = null;
+
+    document.getElementById('entry-pass').addEventListener('keypress', (e) => { if (e.key === 'Enter') checkEntryPass(); });
     
     function checkLockout() {
-        const lockoutTime = localStorage.getItem('spin_lockout_expiry');
-        if (lockoutTime) {
-            const remaining = lockoutTime - Date.now();
-            if (remaining > 0) {
+        const lockoutTimeStr = localStorage.getItem('spin_lockout_expiry');
+        if (lockoutTimeStr) {
+            const lockoutTime = parseInt(lockoutTimeStr);
+            const nowRemaining = lockoutTime - Date.now();
+            
+            if (nowRemaining > 0) {
                 document.getElementById('lockout-screen').style.display = 'flex';
-                const mins = Math.floor(remaining / 60000);
-                const secs = Math.floor((remaining % 60000) / 1000);
-                document.getElementById('lock-timer').innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-                setTimeout(checkLockout, 1000);
+                if (!lockoutInterval) {
+                    lockoutInterval = setInterval(() => {
+                        const currentRealRemaining = parseInt(localStorage.getItem('spin_lockout_expiry')) - Date.now();
+                        
+                        if (currentRealRemaining <= 0) {
+                            clearInterval(lockoutInterval);
+                            lockoutInterval = null;
+                            localStorage.removeItem('spin_lockout_expiry');
+                            localStorage.setItem('spin_attempts', '0');
+                            document.getElementById('lockout-screen').style.display = 'none';
+                        } else {
+                            // The Magic Math: Scale the real 1.5 min remaining to show a 5 min countdown
+                            const ratio = DISPLAY_LOCKOUT_MS / ACTUAL_LOCKOUT_MS;
+                            const visualRemaining = currentRealRemaining * ratio;
+                            
+                            const mins = Math.floor(visualRemaining / 60000);
+                            const secs = Math.floor((visualRemaining % 60000) / 1000);
+                            document.getElementById('lock-timer').innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+                        }
+                    }, 100); // Higher frequency for smooth "fake" clock
+                }
                 return true;
             } else {
                 localStorage.removeItem('spin_lockout_expiry');
                 localStorage.setItem('spin_attempts', '0');
-                attempts = 0;
                 document.getElementById('lockout-screen').style.display = 'none';
             }
         }
@@ -127,14 +148,16 @@
     }
 
     function failAttempt(statusId) {
-        attempts++;
-        localStorage.setItem('spin_attempts', attempts);
-        if (attempts >= 3) {
-            const expiry = Date.now() + (10 * 60 * 1000);
-            localStorage.setItem('spin_lockout_expiry', expiry);
+        let currentAttempts = parseInt(localStorage.getItem('spin_attempts') || "0");
+        currentAttempts++;
+        localStorage.setItem('spin_attempts', currentAttempts.toString());
+        
+        if (currentAttempts >= 3) {
+            const expiry = Date.now() + ACTUAL_LOCKOUT_MS;
+            localStorage.setItem('spin_lockout_expiry', expiry.toString());
             checkLockout();
         } else {
-            document.getElementById(statusId).innerText = `Incorrect. ${3 - attempts} attempts left.`;
+            document.getElementById(statusId).innerText = `ACCESS DENIED. ${3 - currentAttempts} ATTEMPTS REMAIN.`;
         }
     }
 
@@ -142,16 +165,17 @@
         if (checkLockout()) return;
         const pass = document.getElementById('entry-pass').value;
         if (pass === "2125") {
+            localStorage.setItem('spin_attempts', '0');
             document.getElementById('entry-screen').style.display = 'none';
             document.getElementById('main-app').style.display = 'flex';
             drawWheel();
         } else {
             failAttempt('entry-status');
+            document.getElementById('entry-pass').value = "";
         }
     }
 
     function checkConsolePass() {
-        if (checkLockout()) return;
         const pass = document.getElementById('console-pass').value;
         if (pass === "2413") {
             document.getElementById('console-pass-screen').style.display = 'none';
@@ -172,19 +196,14 @@
     
     let segments = [], isSpinning = false, rotation = 0, lastTickIdx = -1;
     let activeCommand = "", confettiParticles = [], isDonMode = false, originalNames = "", tapCount = 0, tapTimer;
-
     let audioCtx;
     const cheerAudio = new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3');
 
-    function initAudio() {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-    }
+    function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); }
 
     function playTick() {
         if (!audioCtx) return;
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
+        const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
         osc.type = 'sine'; osc.frequency.setValueAtTime(400, audioCtx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.04);
         gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
@@ -195,15 +214,10 @@
         setTimeout(() => pointerEl.style.transform = "translateX(-50%) rotate(0deg)", 40);
     }
 
-    function playCheer() {
-        cheerAudio.play().catch(() => {});
-    }
-
     function drawWheel() {
         const names = namesArea.value.split('\n').filter(t => t.trim() !== "");
         segments = names.map((n, i) => ({ 
-            name: n.trim(), 
-            color: ["#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#3b82f6", "#ef4444", "#fb923c", "#2dd4bf"][i % 8] 
+            name: n.trim(), color: ["#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#3b82f6", "#ef4444", "#fb923c", "#2dd4bf"][i % 8] 
         }));
         render();
     }
@@ -222,79 +236,48 @@
         });
     }
 
-    // --- UPDATED SPIN LOGIC ---
     function spin() {
         if (isSpinning || segments.length === 0) return;
-        initAudio();
-        isSpinning = true;
-
+        initAudio(); isSpinning = true;
         let targetIdx = -1;
         const cmd = activeCommand.toLowerCase();
 
-        // Handle Weighted Rigging: /John_50 /Mike_50
         if (cmd.includes('_')) {
             const rigs = cmd.split(' ').filter(c => c.startsWith('/') && c.includes('_'));
-            let roll = Math.random() * 100;
-            let cumulative = 0;
-
+            let roll = Math.random() * 100; let cumulative = 0;
             for (let r of rigs) {
                 const parts = r.substring(1).split('_'); 
                 const name = parts[0].replace(/_/g, ' '); 
                 const weight = parseInt(parts[1]);
                 const idx = segments.findIndex(s => s.name.toLowerCase() === name);
-
                 if (idx !== -1) {
                     cumulative += weight;
-                    if (roll <= cumulative) {
-                        targetIdx = idx;
-                        break; 
-                    }
+                    if (roll <= cumulative) { targetIdx = idx; break; }
                 }
             }
-        } 
-        else if (cmd.startsWith('/alm')) {
+        } else if (cmd.startsWith('/alm')) {
             const target = cmd.replace('/alm', '').trim();
             targetIdx = segments.findIndex(s => s.name.toLowerCase() === target);
         }
 
-        if (targetIdx === -1) {
-            targetIdx = Math.floor(Math.random() * segments.length);
-        }
-
+        if (targetIdx === -1) targetIdx = Math.floor(Math.random() * segments.length);
         const arcSize = (Math.PI * 2) / segments.length;
         const stopAngle = (Math.PI * 1.5) - (targetIdx * arcSize) - (arcSize / 2);
         const extraSpins = (Math.PI * 2) * (5 + Math.random() * 5); 
-        
         let targetRotation = rotation + extraSpins + (stopAngle - (rotation % (Math.PI * 2)));
-        
         animateTo(targetRotation);
     }
 
     function animateTo(targetRot) {
         const step = () => {
             let diff = targetRot - rotation;
-            if (diff < 0.001) {
-                rotation = targetRot;
-                render();
-                isSpinning = false;
-                finalize();
-                return;
-            }
-            
-            let speed = diff * 0.05;
-            if (speed < 0.01) speed = 0.01;
-            
+            if (diff < 0.001) { rotation = targetRot; render(); isSpinning = false; finalize(); return; }
+            let speed = diff * 0.05; if (speed < 0.01) speed = 0.01;
             rotation += speed;
-            
             const arcSize = (Math.PI * 2) / segments.length;
             const currentTickIdx = Math.floor(((Math.PI * 1.5) - (rotation % (Math.PI * 2)) + (Math.PI * 2)) % (Math.PI * 2) / arcSize);
-            if (currentTickIdx !== lastTickIdx) { 
-                playTick(); 
-                lastTickIdx = currentTickIdx; 
-            }
-            
-            render();
-            requestAnimationFrame(step);
+            if (currentTickIdx !== lastTickIdx) { playTick(); lastTickIdx = currentTickIdx; }
+            render(); requestAnimationFrame(step);
         };
         step();
     }
@@ -304,50 +287,27 @@
         const normalized = (rotation % (Math.PI * 2) + (Math.PI * 2)) % (Math.PI * 2);
         const winIdx = Math.floor(((Math.PI * 1.5) - normalized + (Math.PI * 2)) % (Math.PI * 2) / arcSize);
         const winner = segments[winIdx % segments.length];
-        playCheer();
+        cheerAudio.play().catch(()=>{});
         document.getElementById('winner-name').innerText = winner.name;
         document.getElementById('winner-name').style.color = winner.color;
-        document.getElementById('don-btn').style.backgroundColor = winner.color;
-        document.getElementById('don-btn').style.display = isDonMode ? 'none' : 'inline-block';
-        document.getElementById('winner-msg').innerText = isDonMode ? "IS THE FINAL RESULT!" : "HAS WON!";
         document.getElementById('win-overlay').style.display = 'flex';
         startConfetti();
     }
 
-    function startDoubleOrNothing() {
-        originalNames = namesArea.value; isDonMode = true;
-        namesArea.value = "DOUBLE\nNOTHING\nDOUBLE\nNOTHING\nDOUBLE\nNOTHING";
-        drawWheel(); document.getElementById('win-overlay').style.display = 'none';
-        setTimeout(() => spin(), 500);
-    }
-
     function handleCenterTap() {
-        tapCount++;
-        clearTimeout(tapTimer);
+        tapCount++; clearTimeout(tapTimer);
         tapTimer = setTimeout(() => tapCount = 0, 500);
-        if (tapCount >= 5) { 
-            document.getElementById('console-pass-screen').style.display = 'flex'; 
-            tapCount = 0; 
-        }
+        if (tapCount >= 5) { document.getElementById('console-pass-screen').style.display = 'flex'; tapCount = 0; }
         else if (!isSpinning) spin();
     }
 
-    function applyAndClose() {
-        activeCommand = rigInput.value.trim();
-        rigInput.value = "";
-        document.getElementById('cd-panel').style.display = 'none';
-    }
-
+    function applyAndClose() { activeCommand = rigInput.value.trim(); rigInput.value = ""; document.getElementById('cd-panel').style.display = 'none'; }
+    
     function startConfetti() {
-        confCanvas.width = window.innerWidth; confCanvas.height = window.innerHeight;
-        confettiParticles = [];
+        confCanvas.width = window.innerWidth; confCanvas.height = window.innerHeight; confettiParticles = [];
         const winnerColor = document.getElementById('winner-name').style.color;
         for (let i = 0; i < 80; i++) {
-            confettiParticles.push({
-                x: Math.random() * confCanvas.width, y: -20,
-                size: Math.random() * 8 + 4, color: winnerColor,
-                velY: Math.random() * 4 + 2, velX: Math.random() * 4 - 2, rot: Math.random() * 360
-            });
+            confettiParticles.push({ x: Math.random() * confCanvas.width, y: -20, size: Math.random() * 8 + 4, color: winnerColor, velY: Math.random() * 4 + 2, velX: Math.random() * 4 - 2, rot: Math.random() * 360 });
         }
         animateConf();
     }
@@ -357,21 +317,14 @@
         confCtx.clearRect(0,0,confCanvas.width, confCanvas.height);
         confettiParticles.forEach((p, i) => {
             p.y += p.velY; p.x += p.velX; p.rot += 5;
-            confCtx.save(); confCtx.fillStyle = p.color; confCtx.translate(p.x, p.y);
-            confCtx.rotate(p.rot * Math.PI/180);
-            confCtx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
-            confCtx.restore();
+            confCtx.save(); confCtx.fillStyle = p.color; confCtx.translate(p.x, p.y); confCtx.rotate(p.rot * Math.PI/180);
+            confCtx.fillRect(-p.size/2, -p.size/2, p.size, p.size); confCtx.restore();
             if (p.y > confCanvas.height) confettiParticles.splice(i, 1);
         });
         requestAnimationFrame(animateConf);
     }
 
-    function closeWinner() {
-        document.getElementById('win-overlay').style.display = 'none';
-        if (isDonMode) {
-            namesArea.value = originalNames; isDonMode = false; drawWheel();
-        }
-    }
+    function closeWinner() { document.getElementById('win-overlay').style.display = 'none'; }
 
     checkLockout();
 </script>
