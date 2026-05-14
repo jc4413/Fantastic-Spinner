@@ -3,11 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ICC Spinner</title>
+    <title>Secure Pro Spinner - Absolute Lock Edition</title>
+    
+    <link rel="icon" type="image/png" href="favicon.png">
+
     <style>
         :root { --primary: #8b5cf6; --bg: #0f172a; --panel: #1e293b; --text: #ffffff; --danger: #ef4444; }
         
-        /* The Secret Sauce: Ensures borders stay INSIDE the width/height */
         * { box-sizing: border-box; }
 
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; align-items: center; margin: 0; padding: 0; min-height: 100vh; overflow-x: hidden; }
@@ -93,7 +95,7 @@
 <div id="win-overlay" onclick="closeWinner()">
     <div class="win-card" onclick="event.stopPropagation()">
         <h1 id="winner-name" style="font-size: 42px; margin: 0;">---</h1>
-        <p id="winner-msg" style="margin: 10px 0; font-weight: bold; color: #64748b;">HAS WON!</p>
+        <p id="winner-msg" style="margin: 10px 0; font-weight: bold; color: #64748b;">HAS WINNER!</p>
         <button id="don-btn" onclick="startDoubleOrNothing()">DOUBLE OR NOTHING?</button>
     </div>
 </div>
