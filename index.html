@@ -43,6 +43,21 @@
 
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
+    <!-- Scythe Digital monitoring integration -->
+    <script>
+      window.ScytheTracker = {
+        publicSiteId: "abe5014e0a1af35d2aec5175afeb6608",
+        apiUrl: "https://fantastic-spinner.vercel.app/api/integration/track",
+        apiKey: "144bffb752c064f510faa2e19b68eb455b0684aa0e4de922d05e64f56d96cc58"
+      };
+
+      (function () {
+        const script = document.createElement("script");
+        script.src = "https://fantastic-spinner.vercel.app/protection.js";
+        script.async = true;
+        document.head.appendChild(script);
+      })();
+    </script>
 </head>
 <body onclick="initAudio()">
 
